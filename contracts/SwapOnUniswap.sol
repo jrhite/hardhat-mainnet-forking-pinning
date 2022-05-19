@@ -14,7 +14,7 @@ contract SwapOnUniswap {
         uniswapV2RouterAddr = _uniswapV2RouterAddr;
         uniswapV2Router02 = UniswapV2Router02(uniswapV2RouterAddr);
     }
-
+    
     function swap(address tokenIn, uint amountIn) external {
         IERC20 USDC = IERC20(tokenIn);
 
@@ -29,13 +29,5 @@ contract SwapOnUniswap {
 
         
         uniswapV2Router02.swapExactTokensForETH(amountIn, 100000, path, msg.sender, block.timestamp);
-    }
-
-    function logBalances(address usdcTokenAddr) public view {
-        console.log("msg.sender =", msg.sender);
-        console.log("ETH Balance:");
-        console.logUint(msg.sender.balance);
-        console.log("USDC Balance =");
-        console.logUint(IERC20(usdcTokenAddr).balanceOf(msg.sender));
     }
 }

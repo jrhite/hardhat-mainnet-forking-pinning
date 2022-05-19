@@ -10,19 +10,29 @@ describe("SwapOnUniswap", function () {
   let deployerSigner, userSigner;
 
   let usdcToken;
-  let usdcSwapAmount = ethers.BigNumber.from("101354472905");
+  let usdcTokenBalance;
 
   let swapOnUniswap;
+
+  async function logBalances(accountAddr, tokenAddr) {
+    const token = await ethers.getContractAt("IERC20", tokenAddr);
+    const tokenSymbol = await token.symbol()
+    const tokenDecimals = await token.decimals();
+    const tokenBalance = await token.balanceOf(accountAddr);
+
+    console.log(`account addr = ${accountAddr}`);
+    console.log(`ETH balance = ${ethers.utils.formatEther(await ethers.provider.getBalance(accountAddr))}`);
+    console.log(`${tokenSymbol} balance = ${ethers.utils.formatUnits(tokenBalance, tokenDecimals)}`);
+  }
 
   before(async function () {
     [deployerSigner] = await ethers.getSigners();
 
     usdcToken = await ethers.getContractAt("IERC20", USDC_TOKEN_ADDRESS);
+    usdcTokenBalance = await usdcToken.balanceOf(USER_ADDRESS);
     
     const SwapOnUniswap = await ethers.getContractFactory("SwapOnUniswap");
-    swapOnUniswap = await SwapOnUniswap.deploy(
-      UNISWAP_V2_ROUTER
-    );
+    swapOnUniswap = await SwapOnUniswap.deploy(UNISWAP_V2_ROUTER);
     await swapOnUniswap.deployed();
 
     console.log(`=======================`);
@@ -31,30 +41,30 @@ describe("SwapOnUniswap", function () {
   });
 
   before(async function() {
-    await network.provider.request({
+    await hre.network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [USER_ADDRESS],
     });
 
-    // impersonate account holding lots of WETH
+    // impersonate account holding lots of ETH
     userSigner = await ethers.provider.getSigner(USER_ADDRESS);
 
     swapOnUniswap = await swapOnUniswap.connect(userSigner);
     usdcToken = await usdcToken.connect(userSigner);
 
-    const approveTxn = await usdcToken.approve(swapOnUniswap.address, usdcSwapAmount);
+    const approveTxn = await usdcToken.approve(swapOnUniswap.address, usdcTokenBalance);
     await approveTxn.wait();
 
     console.log(`=======================`);
     console.log("balances before swap");
-    await swapOnUniswap.logBalances(USDC_TOKEN_ADDRESS);
+    await logBalances(USER_ADDRESS, USDC_TOKEN_ADDRESS);
     console.log(`=======================\n`);
   });
 
   after(async function () {
     console.log("balances after swap");
     console.log(`=======================`);
-    await swapOnUniswap.logBalances(USDC_TOKEN_ADDRESS);
+    await logBalances(USER_ADDRESS, USDC_TOKEN_ADDRESS);
     console.log(`=======================\n`);
 
     await hre.network.provider.request({
@@ -65,11 +75,9 @@ describe("SwapOnUniswap", function () {
     swapOnUniswap = await swapOnUniswap.connect(deployerSigner);
   });
 
-  it("Should swap WETH for DAI on Uniswap", async function () {
-    const swapTxn = await swapOnUniswap.swap(USDC_TOKEN_ADDRESS, usdcSwapAmount);
+  it("Should swap USDC for ETH on Uniswap", async function () {
+    const swapTxn = await swapOnUniswap.swap(USDC_TOKEN_ADDRESS, usdcTokenBalance);
 
-    const swapTxnReceipt = await swapTxn.wait();
-    
-    // console.log({ swapTxnReceipt });
+    //const swapTxnReceipt = await swapTxn.wait();
   });
 });
